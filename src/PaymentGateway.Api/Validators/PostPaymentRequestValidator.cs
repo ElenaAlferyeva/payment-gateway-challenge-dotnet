@@ -29,6 +29,9 @@ namespace PaymentGateway.Api.Validators
             RuleFor(x => x)
                 .Must(request =>
                 {
+                    if (request.ExpiryMonth is < 1 or > 12 || request.ExpiryYear == 0)
+                        return false; // Let the individual rules handle this
+
                     // Create a DateTime for the *last moment* of the expiry month
                     var expiryDate = new DateTime(request.ExpiryYear, request.ExpiryMonth, 1).AddMonths(1).AddSeconds(-1);
                     return expiryDate >= DateTime.UtcNow;

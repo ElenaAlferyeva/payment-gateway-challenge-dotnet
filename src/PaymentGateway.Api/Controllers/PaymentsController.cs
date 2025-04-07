@@ -15,13 +15,16 @@ namespace PaymentGateway.Api.Controllers;
 [ApiController]
 public class PaymentsController : Controller
 {
-    private readonly PaymentsRepository _paymentsRepository;
+    private readonly IPaymentsRepository _paymentsRepository;
+    private readonly IPaymentsSimulator _paymentsSimulator;
     private readonly PostPaymentRequestValidator _paymentValidator;
 
-    public PaymentsController(PaymentsRepository paymentsRepository,
+    public PaymentsController(IPaymentsRepository paymentsRepository,
+        IPaymentsSimulator paymentsSimulator,
         PostPaymentRequestValidator postPaymentRequestValidator)
     {
         _paymentsRepository = paymentsRepository;
+        _paymentsSimulator = paymentsSimulator;
         _paymentValidator = postPaymentRequestValidator;
     }
 
@@ -66,65 +69,32 @@ public class PaymentsController : Controller
             return new BadRequestObjectResult(errorMessage);
         }
 
-        // Submit to simulator and determine payment status
-        var status = await SubmitToSimulator(paymentRequest);
-
-        // Prepare the response object
-        var response = new PostPaymentResponse
+        try
         {
-            Id = Guid.NewGuid(),
-            Status = status,
-            CardNumberLastFour = int.Parse(paymentRequest.CardNumber[^4..]),
-            ExpiryMonth = paymentRequest.ExpiryMonth,
-            ExpiryYear = paymentRequest.ExpiryYear,
-            Currency = paymentRequest.Currency,
-            Amount = paymentRequest.Amount
-        };
+            // Submit to simulator and determine payment status
+            var status = await _paymentsSimulator.SubmitAsync(paymentRequest);
 
-        // Save the response to repository
-        _paymentsRepository.Add(response);
+            // Prepare the response object
+            var response = new PostPaymentResponse
+            {
+                Id = Guid.NewGuid(),
+                Status = status,
+                CardNumberLastFour = int.Parse(paymentRequest.CardNumber[^4..]),
+                ExpiryMonth = paymentRequest.ExpiryMonth,
+                ExpiryYear = paymentRequest.ExpiryYear,
+                Currency = paymentRequest.Currency,
+                Amount = paymentRequest.Amount
+            };
 
-        return new OkObjectResult(response);
+            // Save the response to repository
+            _paymentsRepository.Add(response);
+
+            return new OkObjectResult(response);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Simulator error: {ex.Message}");
+        }
     }
 
-    /// <summary>
-    /// Simulates payment processing by sending the request to an external simulator.
-    /// </summary>
-    /// <param name="request">The payment request to submit.</param>
-    /// <returns>The payment status based on simulator response.</returns>
-    /// <exception cref="HttpRequestException">Thrown when the simulator fails with a non-400 error.</exception>
-    private static async Task<PaymentStatus> SubmitToSimulator(PostPaymentRequest request)
-    {
-        // Prepare payload in simulator's expected format
-        var payload = new
-        {
-            card_number = request.CardNumber,
-            expiry_date = $"{request.ExpiryMonth:D2}/{request.ExpiryYear}", // e.g., "04/2025"
-            currency = request.Currency,
-            amount = request.Amount,
-            cvv = request.Cvv.ToString()
-        };
-
-        using var httpClient = new HttpClient();
-        var response = await httpClient.PostAsJsonAsync("http://localhost:8080/payments", payload);
-
-        // Special handling for 400 Bad Request (treated as rejected)
-        if (response.StatusCode == HttpStatusCode.BadRequest)
-        {
-            return PaymentStatus.Rejected;
-        }
-
-        // Throw if any other non-successful status is returned
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Simulator responded with status {response.StatusCode}");
-        }
-
-        // Parse JSON response and extract "authorized" flag
-        var json = await response.Content.ReadAsStringAsync();
-        using var document = JsonDocument.Parse(json);
-        var isAuthorized = document.RootElement.GetProperty("authorized").GetBoolean();
-
-        return isAuthorized ? PaymentStatus.Authorized : PaymentStatus.Declined;
-    }
 }

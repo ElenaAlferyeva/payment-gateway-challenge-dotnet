@@ -2,12 +2,14 @@
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Validators;
 using FluentAssertions;
+using System;
 
 namespace PaymentGateway.Api.Tests.Validators
 {
     public class PostPaymentRequestValidatorTests
     {
         private readonly PostPaymentRequestValidator _validator;
+        private readonly Random _random = new();
 
         public PostPaymentRequestValidatorTests()
         {
@@ -115,11 +117,12 @@ namespace PaymentGateway.Api.Tests.Validators
             // Arrange
             var model = new PostPaymentRequest
             {
-                ExpiryMonth = 12,
+                CardNumber = string.Concat(Enumerable.Range(0, 16).Select(_ => _random.Next(0, 10))),
+                ExpiryMonth = _random.Next(1, 13),
                 ExpiryYear = DateTime.UtcNow.Year + 1,
                 Currency = "USD",
-                Amount = 100,
-                Cvv = 123
+                Amount = _random.Next(100, 10000),
+                Cvv = _random.Next(100, 1000)
             };
 
             // Act
