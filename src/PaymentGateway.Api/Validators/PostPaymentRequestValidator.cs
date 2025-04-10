@@ -1,5 +1,5 @@
-﻿using FluentValidation;
-
+﻿using System.Globalization;
+using FluentValidation;
 using PaymentGateway.Api.Models.Requests;
 
 namespace PaymentGateway.Api.Validators
@@ -42,7 +42,9 @@ namespace PaymentGateway.Api.Validators
                 .NotEmpty()
                 .WithMessage("Currency is required.")
                 .Length(3)
-                .WithMessage("Currency code must be exactly 3 characters.");
+                .WithMessage("Currency code must be exactly 3 characters.")
+                .Must(BeAValidISOCurrency)
+                .WithMessage("Currency must be a valid ISO code.");
 
             RuleFor(x => x.Amount)
                 .NotEmpty()
@@ -54,5 +56,31 @@ namespace PaymentGateway.Api.Validators
                 .Must(cvv => cvv.ToString().Length is 3 or 4)
                 .WithMessage("CVV must be 3 or 4 digits long.");
         }
+
+        private static readonly HashSet<string> IsoCurrencyCodes = CultureInfo
+            .GetCultures(CultureTypes.SpecificCultures)
+            .Select(c =>
+            {
+                try
+                {
+                    return new RegionInfo(c.LCID).ISOCurrencySymbol.ToUpperInvariant();
+                }
+                catch
+                {
+                    return null;
+                }
+            })
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Cast<string>()
+            .Distinct()
+            .ToHashSet();
+
+        private static bool BeAValidISOCurrency(string currencyCode)
+        {
+            return !string.IsNullOrWhiteSpace(currencyCode) &&
+                   currencyCode.Length == 3 &&
+                   IsoCurrencyCodes.Contains(currencyCode.ToUpperInvariant());
+        }
+
     }
 }

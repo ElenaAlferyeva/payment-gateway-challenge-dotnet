@@ -2,7 +2,6 @@
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Validators;
 using FluentAssertions;
-using System;
 
 namespace PaymentGateway.Api.Tests.Validators
 {
@@ -19,7 +18,7 @@ namespace PaymentGateway.Api.Tests.Validators
         [Theory]
         [InlineData(0)]
         [InlineData(13)]
-        public async Task ShouldHaveErrorWhenExpiryMonthIsOutOfRange(int month)
+        public async Task ShouldHaveError_WhenExpiryMonthIsOutOfRange(int month)
         {
             // Arrange
             var model = new PostPaymentRequest { ExpiryMonth = month };
@@ -32,7 +31,7 @@ namespace PaymentGateway.Api.Tests.Validators
         }
 
         [Fact]
-        public async Task ShouldHaveErrorWhenExpiryYearIsInPast()
+        public async Task ShouldHaveError_WhenExpiryYearIsInPast()
         {
             // Arrange
             var model = new PostPaymentRequest
@@ -48,7 +47,7 @@ namespace PaymentGateway.Api.Tests.Validators
         }
 
         [Fact]
-        public async Task ShouldHaveErrorWhenExpiryDateIsInThePast()
+        public async Task ShouldHaveError_WhenExpiryDateIsInThePast()
         {
             // Arrange
             var pastDate = DateTime.UtcNow.AddMonths(-1);
@@ -70,7 +69,7 @@ namespace PaymentGateway.Api.Tests.Validators
         [InlineData(null)]
         [InlineData("US")]
         [InlineData("USAA")]
-        public async Task ShouldHaveErrorWhenCurrencyIsNotThreeCharacters(string currency)
+        public async Task ShouldHaveError_WhenCurrencyIsNotThreeCharacters(string currency)
         {
             // Arrange
             var model = new PostPaymentRequest { Currency = currency };
@@ -83,7 +82,21 @@ namespace PaymentGateway.Api.Tests.Validators
         }
 
         [Fact]
-        public async Task ShouldHaveErrorWhenAmountIsZero()
+        public async Task ShouldHaveError_WhenCurrencyIsNotValidISOCurrency()
+        {
+            // Arrange
+            var model = new PostPaymentRequest { Currency = "AAA" };
+
+            // Act
+            var result = await _validator.TestValidateAsync(model);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.Currency)
+                .WithErrorMessage("Currency must be a valid ISO code.");
+        }
+
+        [Fact]
+        public async Task ShouldHaveError_WhenAmountIsZero()
         {
             // Arrange
             var model = new PostPaymentRequest { Amount = 0 };
@@ -99,7 +112,7 @@ namespace PaymentGateway.Api.Tests.Validators
         [InlineData(null)]
         [InlineData(12)]
         [InlineData(12345)]
-        public async Task ShouldHaveErrorWhenCvvIsInvalid(int? cvv)
+        public async Task ShouldHaveError_WhenCvvIsInvalid(int? cvv)
         {
             // Arrange
             var model = new PostPaymentRequest { Cvv = cvv ?? 0 };
@@ -112,7 +125,7 @@ namespace PaymentGateway.Api.Tests.Validators
         }
 
         [Fact]
-        public async Task ShouldBeValidWhenAllFieldsAreCorrect()
+        public async Task ShouldBeValid_WhenAllFieldsAreCorrect()
         {
             // Arrange
             var model = new PostPaymentRequest

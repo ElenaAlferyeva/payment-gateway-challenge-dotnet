@@ -1,11 +1,7 @@
 ﻿using System.Net;
-
 using FluentAssertions;
-
 using Microsoft.AspNetCore.Mvc;
-
 using Moq;
-
 using PaymentGateway.Api.Controllers;
 using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;

@@ -2,11 +2,10 @@
 using System.Text.Json;
 using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Requests;
-using Microsoft.Extensions.Logging;
 
 namespace PaymentGateway.Api.Services
 {
-    public class PaymentsSimulator(ILogger<PaymentsSimulator> logger) : IPaymentsSimulator
+    public class PaymentsSimulator : IPaymentsSimulator
     {
         public async Task<PaymentStatus> SubmitAsync(PostPaymentRequest request)
         {

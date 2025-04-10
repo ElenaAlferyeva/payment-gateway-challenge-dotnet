@@ -1,9 +1,4 @@
-﻿using System.Net;
-using System.Text.Json;
-
-using Microsoft.AspNetCore.Mvc;
-
-using PaymentGateway.Api.Models;
+﻿using Microsoft.AspNetCore.Mvc;
 using PaymentGateway.Api.Models.Requests;
 using PaymentGateway.Api.Models.Responses;
 using PaymentGateway.Api.Services;
@@ -64,8 +59,8 @@ public class PaymentsController : Controller
 
         if (!validationResult.IsValid)
         {
-            var errorMessage = $"Please provide all required fields for the payment request.\n" +
-                               string.Join("\n", validationResult.Errors.Select(e => e.ErrorMessage));
+            var errorMessage = "The payment request is invalid. Please correct the following errors:\n" +
+                               string.Join("\n", validationResult.Errors.Select(e => $"- {e.ErrorMessage}"));
             return new BadRequestObjectResult(errorMessage);
         }
 
